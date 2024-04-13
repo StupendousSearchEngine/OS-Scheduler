@@ -9,7 +9,7 @@
       "stopAtEntry": false,
       "externalConsole": false,
       "cwd": "/media/noname/Amir/CUFE/CMP02/Second Term/OS/project/Phase 1 (Scheduler)/code/OS-Scheduler",
-      "program": "/media/noname/Amir/CUFE/CMP02/Second Term/OS/project/Phase 1 (Scheduler)/code/OS-Scheduler/build/Debug/outDebug",
+      "program": "${workspaceRoot}/testLinkedList",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
