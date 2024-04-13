@@ -126,4 +126,5 @@ bool getEnd(struct LinkedList* list){
     return 1;
 }
 
+
 #endif /* LINKEDLIST_H */

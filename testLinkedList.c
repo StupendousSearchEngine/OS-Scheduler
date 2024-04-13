@@ -7,38 +7,33 @@
 int main() {
     int c= 0;
     struct Process* p1 = (struct Process*)malloc(sizeof(struct Process));
-    p1->runTime = 1;
+    p1->remainingTime = 3;
     c++;
 
     struct Process* p2 = (struct Process*)malloc(sizeof(struct Process));
-    p2->runTime = 2;
+    p2->remainingTime = 1;
 
     c++;
 
     struct Process* p3 = (struct Process*)malloc(sizeof(struct Process));
-    p3->runTime = 3;
+    p3->remainingTime = 2;
 
     c++;
 
-    struct Queue* q = initQueue(0);
+    struct Queue* q = initQueue(1);
 
     push(q,p1);
     push(q,p2);
     push(q,p3);
 
-    printf("The Top: %d\n", front(q)->runTime);
+    printf("The Top: %d\n", front(q)->remainingTime);
     pop(q);
-    printf("The Top: %d\n", front(q)->runTime);
+    printf("The Top: %d\n", front(q)->remainingTime);
     pop(q);
-    printf("The Top: %d\n", front(q)->runTime);
+    printf("The Top: %d\n", front(q)->remainingTime);
+    pop(q);
+    pop(q);
     
-    
-
-    // Printing the run times of the processes
-    // printf("The second process has run time: %d\n", list->head->next->data->runTime);
-    // printf("The third process has run time: %d\n", list->head->next->next->data->runTime);
-
-    // Freeing allocated memory
     free(p1);
     free(p2);
     free(p3);
