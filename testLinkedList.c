@@ -1,44 +1,43 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "linkedList.h"
+#include "queue.h"
+#include "processStruct.h"
 
 
 int main() {
     int c= 0;
     struct Process* p1 = (struct Process*)malloc(sizeof(struct Process));
-    p1->runTime = 1;
+    p1->remainingTime = 3;
     c++;
 
     struct Process* p2 = (struct Process*)malloc(sizeof(struct Process));
-    p2->runTime = 2;
+    p2->remainingTime = 1;
 
     c++;
 
     struct Process* p3 = (struct Process*)malloc(sizeof(struct Process));
-    p3->runTime = 3;
+    p3->remainingTime = 2;
 
     c++;
 
-    struct LinkedList* list = (struct LinkedList*)malloc(sizeof(struct LinkedList));
-    list->head = NULL;
+    struct Queue* q = initQueue(1);
 
-    c=5;
+    push(q,p1);
+    push(q,p2);
+    push(q,p3);
 
-    insertAtEnd(list, p1);
-    printf("%d",list->head->data->runTime);
-    insertAtEnd(list, p2);
-    insertAtEnd(list, p3);
-
-    // Printing the run times of the processes
-    printf("The first process has run time: %d\n", list->head->data->runTime);
-    printf("The second process has run time: %d\n", list->head->next->data->runTime);
-    printf("The third process has run time: %d\n", list->head->next->next->data->runTime);
-
-    // Freeing allocated memory
+    printf("The Top: %d\n", front(q)->remainingTime);
+    pop(q);
+    printf("The Top: %d\n", front(q)->remainingTime);
+    pop(q);
+    printf("The Top: %d\n", front(q)->remainingTime);
+    pop(q);
+    pop(q);
+    
     free(p1);
     free(p2);
     free(p3);
-    free(list);
+    free(q);
 
     return 0;
 }

@@ -2,7 +2,8 @@
 #define PROCESS_H
 
 struct Process{
-    int runTime;
+    int remainingTime;
+    int priority;
 };
 
 #endif /* PROCESS_H */
