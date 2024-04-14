@@ -91,7 +91,14 @@ Takes the scheduling algoritm name and attributes from the user
 
 /*
 TODO_1.3:
-Takes the scheduling algoritm name and attributes from the user
+Forks a process to execute the scheduler.c 
+gives it the scheduling attributes and if it's RR it will be give 
+the quantum size
+
+
+Note:
+sprintf --> converts int to string and stores it in a dummy char arry in this case
+to send it as and argument to scheduler
 */
 
 //TODO_1.3
