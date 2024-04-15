@@ -2,9 +2,14 @@
 #define QUEUE_H
 
 #include <stdlib.h>
-#include "linkedList.h"
+#include <stdbool.h> 
 #include "processStruct.h"
 
+struct ListNode {
+    struct Process* data;
+    
+    struct ListNode* next;
+};
 
 struct Queue{
     struct ListNode* front;
@@ -16,8 +21,6 @@ struct Queue{
 
 struct Queue* initQueue(int algo){
     struct Queue* queue = (struct Queue*)malloc(sizeof(struct Queue));
-
-    // queue->list = initLikedList();
     queue->back = NULL;
     queue->front = NULL;
     queue->size = 0;
@@ -39,8 +42,8 @@ bool push(struct Queue* queue, struct Process* data){
     }
     // Normal Queue
     if(queue->algo == 0){
-        queue->back = insertNext(queue->back,data),queue->size++;
-        if(queue->size == 1) queue->front = queue->back , queue->list->head=queue->front;
+        queue->back->next = newNode;
+        queue->back = newNode;
         return 1;
     }
 
