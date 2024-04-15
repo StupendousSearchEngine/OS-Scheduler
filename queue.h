@@ -14,7 +14,6 @@ struct ListNode {
 struct Queue{
     struct ListNode* front;
     struct ListNode* back;
-    // struct LinkedList* list;
     int size;
     int algo; // 0:normal,  1:lowest remaining time on top,  2:lowest priority value on top
 };
@@ -50,7 +49,7 @@ bool push(struct Queue* queue, struct Process* data){
     else if(queue->algo == 1){
         struct ListNode* cur = queue->front;
         struct ListNode* prev = NULL;
-        while(cur && cur->data->remainingTime < data->remainingTime){
+        while(cur && cur->data->remaining_time < data->remaining_time){
             prev = cur;
             cur = cur->next;
         }

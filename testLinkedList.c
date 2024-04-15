@@ -7,16 +7,16 @@
 int main() {
     int c= 0;
     struct Process* p1 = (struct Process*)malloc(sizeof(struct Process));
-    p1->remainingTime = 3;
+    p1->remaining_time = 3;
     c++;
 
     struct Process* p2 = (struct Process*)malloc(sizeof(struct Process));
-    p2->remainingTime = 1;
+    p2->remaining_time = 1;
 
     c++;
 
     struct Process* p3 = (struct Process*)malloc(sizeof(struct Process));
-    p3->remainingTime = 2;
+    p3->remaining_time = 2;
 
     c++;
 
@@ -26,11 +26,11 @@ int main() {
     push(q,p2);
     push(q,p3);
 
-    printf("The Top: %d\n", front(q)->remainingTime);
+    printf("The Top: %d\n", front(q)->remaining_time);
     pop(q);
-    printf("The Top: %d\n", front(q)->remainingTime);
+    printf("The Top: %d\n", front(q)->remaining_time);
     pop(q);
-    printf("The Top: %d\n", front(q)->remainingTime);
+    printf("The Top: %d\n", front(q)->remaining_time);
     pop(q);
     pop(q);
     
