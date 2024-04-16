@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": "/media/noname/Amir/CUFE/CMP02/Second Term/OS/project/Phase 1 (Scheduler)/code/OS-Scheduler",
-      "program": "${workspaceRoot}/testLinkedList",
+      "cwd": "/home/peter/Desktop/Scheduler/OS-Scheduler",
+      "program": "${workspaceRoot}/process_generator",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
