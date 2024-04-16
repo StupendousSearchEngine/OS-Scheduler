@@ -4,6 +4,8 @@
 #include<stdlib.h>
 void clearResources(int);
 int msgq_id;
+int scheduler_pid;
+
 int main(int argc, char * argv[])
 {
     signal(SIGINT, clearResources);
@@ -12,7 +14,8 @@ int main(int argc, char * argv[])
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     // 3. Initiate and create the scheduler and clock processes.
     // 4. Use this function after creating the clock process to initialize clock
-    
+  
+
     key_t key_id;
     int send_val;
     FILE *key = fopen("keyfile", "r");
@@ -45,6 +48,7 @@ and adds the read process to array of processes
         fscanf(fileptr,"%d\t%d\t%d\t%d",&id,&arrival,&run,&p);
         number_of_processes=id;
     }
+
     fclose(fileptr);
     fileptr=fopen("processes.txt","r");
     if(fileptr==NULL)
@@ -63,6 +67,7 @@ and adds the read process to array of processes
         arr_of_processes[i].arrival_time=arrival;
         arr_of_processes[i].run_time=run;
         arr_of_processes[i].priority=p;
+        arr_of_processes[i].remaining_time=run;
         i++;
     }
 //End of TODO_1.1
@@ -74,7 +79,7 @@ Takes the scheduling algoritm name and attributes from the user
 */
 
 //TODO_1.2
-  char *scheduling_algorithm_name;
+  char scheduling_algorithm_name[10];
     printf("Enter Scheduling algorithm name (HPF)/(SRTN)/(RR) : ");
     scanf("%s",scheduling_algorithm_name);
     int quantum;
@@ -95,7 +100,6 @@ Forks a process to execute the scheduler.c
 gives it the scheduling attributes and if it's RR it will be give 
 the quantum size
 
-
 Note:
 sprintf --> converts int to string and stores it in a dummy char arry in this case
 to send it as and argument to scheduler
@@ -103,29 +107,35 @@ to send it as and argument to scheduler
 
 //TODO_1.3
     printf("Forking Scheduler..\n");
+    
     int pid = fork();
+    scheduler_pid=pid;
     if (pid == -1)                         //fork() returns -1 if forking failed
         perror("Error in forking scheduler process!!\n");
     else if (pid == 0) {
-        system("gcc -o scheduler.out scheduler.c");
         printf("Scheduling..\n");
+        system("gcc -o scheduler.out scheduler.c");
+        scheduler_pid=getpid();
+        printf("%d\n",scheduler_pid);
         char temp1[10],temp2[10],temp3[10];
         if (scheduling_algorithm_name == "RR")
         {    
+            
             sprintf(temp1,"%d",number_of_processes);
             sprintf(temp2,"%d",quantum);
             sprintf(temp3,"%d",ctx_switch_time);
-            char*args[]={temp1,temp2,temp3};        
-            execv("./scheduler.out", args);
+            char*args[]={scheduling_algorithm_name,temp1,temp3,temp2};        
+            printf("%d",execv("./scheduler.out", args));
         }        
         else
         { 
             sprintf(temp1,"%d",number_of_processes);
             sprintf(temp3,"%d",ctx_switch_time);
-            char*args[]={temp1,temp3};  
-            execv("./scheduler.out", args);
+            char*args[]={scheduling_algorithm_name,temp1,temp3};  
+            execv("scheduler.out", args);
         }
     }
+
 
 
 /*
@@ -138,6 +148,7 @@ affect anything else since the condition says pid!=0 which means that only
 the parent will execute the next lines and fork the clk
 
 */
+
     if(pid!=0)
     {
         int clkpid=fork();
@@ -148,12 +159,11 @@ the parent will execute the next lines and fork the clk
         else if(clkpid==0)
         {
             char*args[]={"dummy"};      //dummy argument for execv as it has to take arguments
-            system("gcc clk.c clk.out");
+            system("gcc -o clk.out clk.c");
             execv("./clk.out",args);
         }
         else
         {
-
         //TODO_1.4
             initClk();
         //End of TODO_1.4
@@ -163,9 +173,12 @@ at this point in time send it to scheduler if no process arrived at this time co
 */
     //TODO_1.6
         int process_arr_index=0;
+        printf("%d\n",number_of_processes);
         while (process_arr_index < number_of_processes) {
-                if (arr_of_processes[process_arr_index].arrival_time == getClk()) {
+            if (arr_of_processes[process_arr_index].arrival_time == getClk()) {
+                    printf("YEAH!!%d\n",getClk());
                     int send_val = msgsnd(msgq_id, &arr_of_processes[process_arr_index], sizeof(struct Process), !IPC_NOWAIT);
+                    kill(scheduler_pid,SIGUSR1);
                     process_arr_index++;
         }
     }
@@ -186,9 +199,10 @@ at this point in time send it to scheduler if no process arrived at this time co
 }
 
 
-/*
-Clearing messge queue
-*/
+// /*
+// Clearing messge queue
+// */
+
 void clearResources(int signum)
 {
     printf("CLEARING RESOURCES..\n");
