@@ -1,5 +1,5 @@
 #include "headers.h"
-#include "processStruct.h"
+#include "process.h"
 #include<string.h>
 #include<stdlib.h>
 void clearResources(int);
@@ -116,7 +116,7 @@ to send it as and argument to scheduler
         printf("Scheduling..\n");
         system("gcc -o scheduler.out scheduler.c");
         scheduler_pid=getpid();
-        printf("%d\n",scheduler_pid);
+        printf("SCHEDULERPID: %d\n",scheduler_pid);
         char temp1[10],temp2[10],temp3[10];
         if (scheduling_algorithm_name == "RR")
         {    
@@ -124,19 +124,19 @@ to send it as and argument to scheduler
             sprintf(temp1,"%d",number_of_processes);
             sprintf(temp2,"%d",quantum);
             sprintf(temp3,"%d",ctx_switch_time);
-            char*args[]={scheduling_algorithm_name,temp1,temp3,temp2};        
+            /*I will modify this to match natural convention(sarah)*/
+            char*args[]={"scheduler.out",scheduling_algorithm_name,temp1,temp3,temp2};        
             printf("%d",execv("./scheduler.out", args));
         }        
         else
         { 
             sprintf(temp1,"%d",number_of_processes);
             sprintf(temp3,"%d",ctx_switch_time);
-            char*args[]={scheduling_algorithm_name,temp1,temp3};  
+            char*args[]={"scheduler.out",scheduling_algorithm_name,temp1,temp3};  
             execv("scheduler.out", args);
         }
     }
-
-
+    
 
 /*
 Here the parent should be the one to fork a process to run clk.c
@@ -177,7 +177,16 @@ at this point in time send it to scheduler if no process arrived at this time co
         while (process_arr_index < number_of_processes) {
             if (arr_of_processes[process_arr_index].arrival_time == getClk()) {
                     printf("YEAH!!%d\n",getClk());
+                    printf("SCHEDULERPID: %d\n",scheduler_pid);
                     int send_val = msgsnd(msgq_id, &arr_of_processes[process_arr_index], sizeof(struct Process), !IPC_NOWAIT);
+                    if (send_val == -1) {
+                    // Failed to send message
+                        perror("msgsnd failed");
+                    } else {
+                    // Message sent successfully
+                    printf("Message sent successfully\n");
+                    }
+                    printf("SCHEDULERPID: %d\n",scheduler_pid);
                     kill(scheduler_pid,SIGUSR1);
                     process_arr_index++;
         }

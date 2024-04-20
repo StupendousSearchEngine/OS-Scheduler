@@ -2,8 +2,8 @@
 #define QUEUE_H
 
 #include <stdlib.h>
-#include <stdbool.h> 
-#include "processStruct.h"
+//#include <stdbool.h> 
+#include "process.h"
 
 struct ListNode {
     struct Process* data;
@@ -28,9 +28,17 @@ struct Queue* initQueue(int algo){
     return queue;
 }
 
-bool push(struct Queue* queue, struct Process* data){
+int push(struct Queue* queue, struct Process* data){
+    printf("PUSH QUEUE\n");
     if(!queue) return 0;
+    printf("Push Queue...\n");
     struct ListNode* newNode = (struct ListNode*)malloc(sizeof(struct ListNode));
+    if (!newNode)
+    {
+        perror("error in malloc\n");
+        exit(-1);
+    }
+    printf("Push Queue...\n");
     newNode->data = data;
     newNode->next=NULL;
     if(queue->size == 0){
@@ -39,6 +47,7 @@ bool push(struct Queue* queue, struct Process* data){
         queue->size = 1;
         return 1;
     }
+    
     // Normal Queue
     if(queue->algo == 0){
         queue->back->next = newNode;
@@ -87,7 +96,7 @@ bool push(struct Queue* queue, struct Process* data){
     return 1;
 }
 
-bool pop(struct Queue* queue){
+int pop(struct Queue* queue){
     if(!queue || !queue->size) return 0;
     else {
         struct ListNode* temp = queue->front;

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "queue.h"
-#include "processStruct.h"
+#include "process.h"
 
 
 int main() {

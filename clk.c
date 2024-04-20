@@ -6,8 +6,7 @@
  */
 
 #include "headers.h"
-/*test*/
-int x;
+
 int shmid;
 
 /* Clear the resources before exit */
