@@ -2,9 +2,37 @@
 #include "process.h"
 #include<string.h>
 #include<stdlib.h>
+#include <time.h>
+
+void delay(int number_of_seconds)
+
+{
+
+// Converting time into milli_seconds
+
+int milli_seconds = 1000 * number_of_seconds;
+
+// Storing start time
+
+__clock_t start_time = clock();
+
+// looping till required time is not achieved
+
+while (clock() < start_time + milli_seconds) ;
+
+}
+
+struct msg_buffer {
+    long msg_type;
+int id,arrival_time,run_time,priority,remaining_time,finish_time,response_time;
+//I'm gonna add something for RR sake but we may remmove it later
+int last_run_time;
+pid_t process_id;
+};
+
 void clearResources(int);
 int msgq_id;
-int scheduler_pid;
+int scheduler_pid ;
 
 int main(int argc, char * argv[])
 {
@@ -18,7 +46,7 @@ int main(int argc, char * argv[])
 
     key_t key_id;
     int send_val;
-    FILE *key = fopen("keyfile", "r");
+    // FILE *key = fopen("keyfile", "r");
     key_id = ftok("keyfile", 65);
     msgq_id = msgget(key_id, 0666 | IPC_CREAT);
 
@@ -71,8 +99,7 @@ and adds the read process to array of processes
         i++;
     }
 //End of TODO_1.1
-
-
+    
 /*
 TODO_1.2:
 Takes the scheduling algoritm name and attributes from the user
@@ -110,33 +137,38 @@ to send it as and argument to scheduler
     
     int pid = fork();
     scheduler_pid=pid;
-    if (pid == -1)                         //fork() returns -1 if forking failed
+    if (pid == -1) {
         perror("Error in forking scheduler process!!\n");
-    else if (pid == 0) {
+    } else if (pid == 0) {
         printf("Scheduling..\n");
-        system("gcc -o scheduler.out scheduler.c");
-        scheduler_pid=getpid();
-        printf("SCHEDULERPID: %d\n",scheduler_pid);
-        char temp1[10],temp2[10],temp3[10];
-        if (scheduling_algorithm_name == "RR")
-        {    
-            
-            sprintf(temp1,"%d",number_of_processes);
-            sprintf(temp2,"%d",quantum);
-            sprintf(temp3,"%d",ctx_switch_time);
-            /*I will modify this to match natural convention(sarah)*/
-            char*args[]={"scheduler.out",scheduling_algorithm_name,temp1,temp3,temp2};        
-            printf("%d",execv("./scheduler.out", args));
-        }        
-        else
-        { 
-            sprintf(temp1,"%d",number_of_processes);
-            sprintf(temp3,"%d",ctx_switch_time);
-            char*args[]={"scheduler.out",scheduling_algorithm_name,temp1,temp3};  
-            execv("scheduler.out", args);
+        printf("Scheduler process not running\n");
+
+        // Compile the scheduler.c to scheduler.o
+        if (system("gcc scheduler.c -o scheduler.o") != 0) {
+            perror("Error compiling scheduler.c\n");
+            exit(EXIT_FAILURE);
         }
-    }
-    
+        printf("Scheduler process  running\n");
+
+        scheduler_pid = getpid();
+        printf("SCHEDULERPID from the generator: %d\n", scheduler_pid);
+
+        char temp1[10], temp2[10], temp3[10];
+        sprintf(temp1, "%d", number_of_processes);
+        sprintf(temp3, "%d", ctx_switch_time);
+
+        if (strcmp(scheduling_algorithm_name, "RR") == 0) {
+            sprintf(temp2, "%d", quantum);
+            char *args[] = {"scheduler.o", scheduling_algorithm_name, temp1, temp3, temp2, NULL};
+            execv("./scheduler.o", args);
+            perror("execv failed");
+        } else {
+            char *args[] = {"scheduler.o", scheduling_algorithm_name, temp1, temp3, NULL};
+            execv("./scheduler.o", args);
+            perror("execv failed");
+        }
+        printf("SCHEDULER STARTEDDDDDDDDDDDDD\n");
+    } 
 
 /*
 Here the parent should be the one to fork a process to run clk.c
@@ -149,56 +181,82 @@ the parent will execute the next lines and fork the clk
 
 */
 
-    if(pid!=0)
-    {
-        int clkpid=fork();
-        if(clkpid==-1)
-        {
+    if (pid != 0) {
+        sleep(5);
+        int clkpid = fork();
+        if (clkpid == -1) {
             perror("Error in forking clock process!!");
-        }
-        else if(clkpid==0)
-        {
-            char*args[]={"dummy"};      //dummy argument for execv as it has to take arguments
-            system("gcc -o clk.out clk.c");
-            execv("./clk.out",args);
-        }
-        else
-        {
-        //TODO_1.4
+        } else if (clkpid == 0) {
+            char *args[] = {"dummy", NULL}; // Dummy argument for execv as it has to take arguments
+            if (system("gcc -o clk.out clk.c") != 0) {
+                perror("Error compiling clk.c\n");
+                exit(EXIT_FAILURE);
+            }
+            execv("./clk.out", args);
+            perror("execv failed");
+        } else {
+            // Initialize clock
             initClk();
-        //End of TODO_1.4
-/*
-Here we loop on the processes array and check the clk and if there is a process which arrived
-at this point in time send it to scheduler if no process arrived at this time continue looping 
-*/
-    //TODO_1.6
-        int process_arr_index=0;
-        printf("%d\n",number_of_processes);
-        while (process_arr_index < number_of_processes) {
-            if (arr_of_processes[process_arr_index].arrival_time == getClk()) {
-                    printf("YEAH!!%d\n",getClk());
-                    printf("SCHEDULERPID: %d\n",scheduler_pid);
-                    int send_val = msgsnd(msgq_id, &arr_of_processes[process_arr_index], sizeof(struct Process), !IPC_NOWAIT);
+
+            // Loop through the processes array and check the clock
+            // If a process has arrived at this point in time, send it to the scheduler
+            // If no process arrived at this time, continue looping
+            int process_arr_index = 0;
+            printf("%d\n", number_of_processes);
+            while (process_arr_index < number_of_processes) {
+                int send_signal = 0;
+
+                while (process_arr_index<number_of_processes && arr_of_processes[process_arr_index].arrival_time <= getClk()) {
+                    printf("process arrived at clk %d\n", getClk());
+                    //printf("SCHEDULERPID: %d\n", scheduler_pid);
+                    struct msg_buffer message;
+                    message.arrival_time = arr_of_processes[process_arr_index].arrival_time;
+                    message.finish_time = arr_of_processes[process_arr_index].finish_time;
+                    message.id = arr_of_processes[process_arr_index].id;
+                    message.last_run_time = arr_of_processes[process_arr_index].last_run_time;
+                    message.priority = arr_of_processes[process_arr_index].priority;
+                    message.process_id = -1;
+                    message.remaining_time = arr_of_processes[process_arr_index].remaining_time;
+                    message.response_time = arr_of_processes[process_arr_index].response_time;
+                    message.run_time = arr_of_processes[process_arr_index].run_time;
+                    message.msg_type = 1;
+                    int send_val = msgsnd(msgq_id, (void *)&message, sizeof(struct msg_buffer) - sizeof(long), 0);
                     if (send_val == -1) {
-                    // Failed to send message
+                        // Failed to send message
                         perror("msgsnd failed");
                     } else {
-                    // Message sent successfully
-                    printf("Message sent successfully\n");
+                        // Message sent successfully
+                        printf("Message sent successfully\n");
                     }
-                    printf("SCHEDULERPID: %d\n",scheduler_pid);
-                    kill(scheduler_pid,SIGUSR1);
+                    send_signal = 1;
+                    // kill(scheduler_pid, SIGUSR1);
+                    // delay(1);
                     process_arr_index++;
+                }
+                if(send_signal != 0){
+                    struct msg_buffer message;
+                    message.arrival_time = -1;
+                    int send_val = msgsnd(msgq_id, (void *)&message, sizeof(struct msg_buffer) - sizeof(long), 0);
+                    if (send_val == -1) {
+                        // Failed to send message
+                        perror("msgsnd failed");
+                    } else {
+                        // Message sent successfully
+                        printf("end queue process send successfully\n");
+                    }
+                    kill(scheduler_pid,SIGUSR1);
+                } 
+            }
+
+            // End of loop
+
+            // End of clock process forking
         }
     }
-    //End of TODO_1.6
-    //TODO_1.7
-    int stat_loc;
-    waitpid(pid,&stat_loc,0);
-    //End of TODO_1.7
-        }
-    }
-    
+
+    int returnStatus;
+    printf("this is pid %d\n",scheduler_pid);
+    waitpid(scheduler_pid, &returnStatus, 0);
 //End of TODO_1.3
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.  //DONE

@@ -29,16 +29,13 @@ struct Queue* initQueue(int algo){
 }
 
 int push(struct Queue* queue, struct Process* data){
-    printf("PUSH QUEUE\n");
     if(!queue) return 0;
-    printf("Push Queue...\n");
     struct ListNode* newNode = (struct ListNode*)malloc(sizeof(struct ListNode));
     if (!newNode)
     {
         perror("error in malloc\n");
         exit(-1);
     }
-    printf("Push Queue...\n");
     newNode->data = data;
     newNode->next=NULL;
     if(queue->size == 0){
@@ -52,7 +49,8 @@ int push(struct Queue* queue, struct Process* data){
     if(queue->algo == 0){
         queue->back->next = newNode;
         queue->back = newNode;
-        return 1;
+        
+        
     }
 
     else if(queue->algo == 1){
@@ -114,5 +112,19 @@ struct Process* front(struct Queue* queue){
     else return queue->front->data;
 }
 
+void printQueue(struct Queue* queue) {
+    if (!queue) {
+        printf("Queue is NULL\n");
+        return;
+    }
 
+    printf("Printing Queue (Size: %d, Algorithm: %d)\n", queue->size, queue->algo);
+
+    struct ListNode* current = queue->front;
+    while (current != NULL) {
+        printf("Process ID: %d, Remaining Time: %d, Priority: %d\n",
+               current->data->id, current->data->remaining_time, current->data->priority);
+        current = current->next;
+    }
+}
 #endif /* QUEUE_H */
