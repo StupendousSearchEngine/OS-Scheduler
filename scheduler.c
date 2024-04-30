@@ -1,9 +1,9 @@
 #include "headers.h"
 #include "process.h"
 #include <string.h>
+#include<math.h>
 #include"queue.h"
 #define SHM_SIZE 4096
-
 
 struct msg_buffer {
     long msg_type;
@@ -37,7 +37,7 @@ int ctx_switch_time, num_processes_total;
 int quantum;
 void pickSchedulingAlgo();
 struct Process *current_process;
-
+int terminated_process_number=0;
 struct Queue *ready_queue;
 struct Queue *termList;
 int scheduling_algo; //0 for RR //1 for  SRTN //2 for HPF
@@ -45,11 +45,14 @@ int key_id;
 int msgq_id ;
 char *shmaddr_for_process;
 int shmid_for_process;
-
+FILE*scheduler_log;
+FILE*scheduler_perf;
+int total_time=0;
 void decode_with_hash(const char* str, int* num1, int* num2) {
     // Tokenize the input string based on the '#' separator
+    printf("The reaper of souls Sarah%s\n",str);
     char* token = strtok((char*)str, "#");
-
+    printf("Cold blodded vengful grim reaper Sarah %s\n",token);
     // Convert the first token to an integer
     if (token != NULL) {
         printf("first token %s",token);
@@ -90,6 +93,7 @@ void receive_process()
         recieved_process->arrival_time =  message.arrival_time;
         recieved_process->remaining_time =  message.remaining_time;
         recieved_process->priority =  message.priority;
+        recieved_process->run_time =  message.run_time;
         recieved_process->id =  message.id;
         recieved_process->process_id =  message.process_id;
         push(ready_queue, recieved_process);
@@ -103,7 +107,7 @@ void receive_process()
 void handler(int signum)
 {
     receive_process();
-    if (scheduling_algo!=0)
+    if (scheduling_algo!=0 || current_process==NULL)
         pickSchedulingAlgo();
     printf("end handler\n");
     signal(SIGUSR1,handler);
@@ -115,6 +119,7 @@ void processHandler(int signum)
     printf("the process send the scheulder a sig or RR\n");
     int rem_time;
     int clk_in_process;
+    current_process->turn_around_time=getClk()-current_process->arrival_time;
     if (current_process)
     {
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
@@ -122,6 +127,10 @@ void processHandler(int signum)
         if(rem_time == 0) {
             current_process->finish_time = clk_in_process;
             current_process->remaining_time = 0;
+            printf("15641e565");
+            fflush(scheduler_log);
+            fprintf(scheduler_log,"At time %d process %d stopped arr %d total %d remain %d wait %d\n",getClk(),current_process->id,
+            current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
             push(termList,current_process);
             current_process=NULL;
             raise(SIGXCPU);
@@ -168,20 +177,29 @@ void runProcess(struct Process *top)
             execv("./process.o", args);
             perror("execv failed");
         }
-        else{
+        else{ //start
+            current_process = top;
+            current_process->last_run_time=getClk();
+            current_process->wait+=getClk()-current_process->arrival_time;
+            fflush(scheduler_log);
+
+             fprintf(scheduler_log,"At time %d process %d started arr %d total %d remain %d wait %d \n",getClk(),current_process->id,
+            current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
             printf("popping id %d", ready_queue->front->data->id);
             top->process_id = pid;
-            current_process = top;
-           
             pop(ready_queue);
             printQueue(ready_queue);
         }
     }
-    else
+    else //resume
     { // i have forked this process before
         fflush(stdout);
         printf("I saw you before!!!!\n");
         current_process = top;
+        current_process->wait += getClk()-current_process->last_run_time;
+        current_process->last_run_time=getClk();
+        fprintf(scheduler_log,"At time %d process %d resumed arr %d total %d remain %d wait %d",getClk(),current_process->id,
+        current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
         if (kill(top->process_id, SIGCONT) == -1) {
             perror("Error sending SIGCONT signal");
             printf("errormsg");
@@ -197,8 +215,6 @@ void runProcess(struct Process *top)
         }
         
     }
-
-
 }
 void contextSwitch(int signum)
 {
@@ -206,10 +222,7 @@ void contextSwitch(int signum)
     int currclk=getClk();
     while(currclk+ctx_switch_time!=getClk());
     signal(SIGXCPU,contextSwitch);
-   
-
 }
-
 
 
 void HPF()
@@ -219,9 +232,8 @@ void HPF()
         top=ready_queue->front->data;
     if(!current_process && top)
     {
-    
+        printf("Enter HPF...\n");
         runProcess(top);
-
     }
 }
 void SRTN()
@@ -275,10 +287,13 @@ void RR()
     {
         int rem_time;
         int clk_in_process;
-       
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
         ////////////////////////////////////////////////////////////////////  
         current_process->remaining_time=rem_time;
+        int wait=current_process->run_time-current_process->remaining_time;
+        fflush(scheduler_log);
+        fprintf(scheduler_log,"At time %d process %d stopped arr %d total %d remain %d wait %d\n",getClk(),current_process->id,
+        current_process->arrival_time,current_process->run_time,current_process->remaining_time,wait);
         int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
         if(sigterm_indcator==-1)
         {
@@ -304,6 +319,68 @@ void RR()
     
 
 }
+int total_execution_time=0;
+double total_wta=0;
+double total_waiting_time=0;
+int*wta_arr;
+void calculate_statistics()
+{
+    int i=0;
+    printf("Evil sarah\n");
+
+while(termList->size>0 && termList->front->data)
+{
+    printf("Evil sarah***\n");
+    total_execution_time+=termList->front->data->run_time;
+    printf("the devil himself sarah11 %d\n",termList->size);
+
+    total_waiting_time=termList->front->data->wait;
+        printf("the devil himself sarah**2 %d\n",termList->size);
+printf("%d\n",termList->front->data->run_time);
+    total_wta=(termList->front->data->turn_around_time)/(termList->front->data->run_time);
+            printf("the devil himself sarah**3 %d\n",termList->size);
+
+    wta_arr[i]=termList->front->data->turn_around_time;
+    printf("the devil himself sarah1 %d\n",termList->size);
+    pop(termList);
+    printf("the devil himself sarah2 %d\n",termList->size);
+    i++;
+
+}
+}
+
+void write_perf()
+{
+    printf("p1");
+     calculate_statistics();
+     fflush(scheduler_perf);
+         printf("p2");
+
+     fprintf(scheduler_perf, "CPU utilization = %0.2f%c \n",((float)total_execution_time/getClk())*100,'%');
+         printf("p3");
+
+     fprintf(scheduler_perf,"Avg WTA = %0.2f \n",total_wta/num_processes_total);
+         printf("p4");
+
+     double avg=total_wta/num_processes_total;
+         printf("p5");
+
+     fprintf(scheduler_perf,"Avg Waiting = %0.2f \n",total_waiting_time/num_processes_total);
+         printf("p6");
+
+     double sd=0;
+         printf("p7");
+
+     for(int i=0;i<num_processes_total;i++)
+     {
+         sd+=pow((wta_arr[i]-avg),2);
+     }
+         printf("p8");
+
+      fprintf(scheduler_perf,"Std WTA = %0.2f \n",sd/num_processes_total);
+          printf("p9");
+
+}
 void pickSchedulingAlgo()
 {
     switch (scheduling_algo)
@@ -325,6 +402,8 @@ int main(int argc, char * argv[])
     //TODO implement the scheduler :)
     //upon termination release the clock resources.
     printf("Scheduler main\n");
+    scheduler_log=fopen("schedulder.log","w");
+    scheduler_perf=fopen("scheduler.perf","w");
     int key = ftok("shmkey",70);
     shmid_for_process = shmget(key,SHM_SIZE, 0666 | IPC_CREAT);
     if (shmid_for_process == -1) {
@@ -345,12 +424,17 @@ int main(int argc, char * argv[])
     signal(SIGUSR2,processHandler);
     signal(SIGXCPU,contextSwitch);
     initClk();
-    termList = initQueue(scheduling_algo);
+    termList = initQueue(0);
     printf("verfy Pid %d\n",getpid());
     current_process=NULL;
  
     ctx_switch_time=atoi(argv[3]);
     num_processes_total = atoi(argv[2]);
+    wta_arr=malloc(num_processes_total*sizeof(struct Process));
+if(!wta_arr)
+{
+    printf("Evil Sarah*2\n");
+}
     
     if (argc==5)
         quantum= atoi(argv[4]);
@@ -377,17 +461,19 @@ int main(int argc, char * argv[])
         perror("Please Enter a Valid Algo Name\n");
         exit(-1);
     }
+
     int prevclk=getClk();
     printf("RR QUANTUM %d\n",quantum);
-    while (scheduling_algo==0)
+    while (scheduling_algo==0 && termList->size!=num_processes_total)
     {
-        
         while(prevclk+quantum!=getClk());
         prevclk=getClk();
         printf("clockking\n");
         RR();
-        
     }
-    while(1);
-
+    while(termList->size!=num_processes_total && scheduling_algo!=0){printf("%d\n",termList->size);}
+    printf("hello bishoy \n");
+    write_perf();
+    fclose(scheduler_perf);
+    fclose(scheduler_log);
 }

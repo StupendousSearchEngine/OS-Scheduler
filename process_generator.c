@@ -96,6 +96,8 @@ and adds the read process to array of processes
         arr_of_processes[i].run_time=run;
         arr_of_processes[i].priority=p;
         arr_of_processes[i].remaining_time=run;
+        arr_of_processes[i].wait=0;
+        arr_of_processes[i].turn_around_time=0;
         i++;
     }
 //End of TODO_1.1
@@ -144,7 +146,7 @@ to send it as and argument to scheduler
         printf("Scheduler process not running\n");
 
         // Compile the scheduler.c to scheduler.o
-        if (system("gcc scheduler.c -o scheduler.o") != 0) {
+        if (system("gcc scheduler.c -o scheduler.o -lm") != 0) {
             perror("Error compiling scheduler.c\n");
             exit(EXIT_FAILURE);
         }

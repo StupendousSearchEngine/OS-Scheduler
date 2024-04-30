@@ -24,7 +24,6 @@ struct Queue* initQueue(int algo){
     queue->front = NULL;
     queue->size = 0;
     queue->algo = algo;
-
     return queue;
 }
 

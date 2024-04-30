@@ -5,7 +5,9 @@ struct Process{
 int id,arrival_time,run_time,priority,remaining_time,finish_time,response_time;
 //I'm gonna add something for RR sake but we may remmove it later
 int last_run_time;
+int wait;
 pid_t process_id;
+int turn_around_time;
 // int mem_size ;
 
 
