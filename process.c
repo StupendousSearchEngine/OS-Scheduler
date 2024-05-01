@@ -1,7 +1,8 @@
 #include "headers.h"
 #define SHM_SIZE 4096
-
+int prev_time_seen;
 void resume(int signum){
+    prev_time_seen=getClk();
     signal(SIGCONT,resume);
 }
 
@@ -32,6 +33,7 @@ char* concatenate_with_hash(int num1, int num2) {
 }
 
 
+
 int main(int agrc, char * argv[])
 {
     signal(SIGCONT,resume);
@@ -49,21 +51,25 @@ int main(int agrc, char * argv[])
         exit(1);
     }
 
-    int prev_time_seen = getClk();
+    prev_time_seen = getClk();
  
     remainingtime = atoi(argv[1]);
     printf("the procces with rem time %d forked\n",remainingtime);
     while (remainingtime > 0)
     {
+        
+     
         if(prev_time_seen != getClk()) {
             printf("Prev time in process : %d, Current clk: %d",prev_time_seen,getClk());
             remainingtime--;
+            
             char str[5];
             sprintf(str, "%d", remainingtime);
             char* message = concatenate_with_hash(remainingtime,getClk());
             strcpy((char *)shmaddr_for_process, message);
             prev_time_seen = getClk();
             printf("remaining time%d\n",remainingtime);
+            
         }
 
     }

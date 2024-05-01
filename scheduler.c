@@ -50,14 +50,18 @@ FILE*scheduler_perf;
 int total_time=0;
 void decode_with_hash(const char* str, int* num1, int* num2) {
     // Tokenize the input string based on the '#' separator
+    printf("IN DECODE WITH HASHHHH %s",str);
+    char*temp;
+    strcpy(temp,str);
     while(strlen(str)<2)
     {
-        printf("WAITINGGGGGGGGGGGGGGGGGGG\n");
+        printf("WAITINGGGGGGGGGGGGGGGGGGG %s\n",str);
+        sleep(1);
     }
     printf("The current reaper process is %d", current_process->id);
     printf("The reaper of souls Sarah%s\n",str);
     //while(strcmp(str,"0")==0);
-    char* token = strtok((char*)str, "#");
+    char* token = strtok((char*)temp, "#");
     printf("Cold blodded vengful grim reaper Sarah %s\n",token);
     // Convert the first token to an integer
     if (token != NULL) {
@@ -240,9 +244,10 @@ void runProcess(struct Process *top)
 }
 void contextSwitch(int signum)
 {
-    printf("cntc SWUUUU\n");
+    printf("cntc SWUUUU %d\n ", getClk());
     int currclk=getClk();
     while(currclk+ctx_switch_time!=getClk());
+    printf("cntc SWUUUU AFTERRR %d \n", getClk());
     signal(SIGXCPU,contextSwitch);
 }
 
@@ -299,17 +304,20 @@ void RR()
     struct Process *top=NULL;
     
     printf("calling RR\n");
+   
     if (ready_queue&& ready_queue->front)
         top=ready_queue->front->data;
-  
-    if (top && current_process)
+    //////////////////////////
+
+    if (current_process)
     {
         int rem_time;
         int clk_in_process;
-    
+        
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
         ////////////////////////////////////////////////////////////////////  
         current_process->remaining_time=rem_time;
+        printf("KILLING process ID %d",current_process->process_id);
         int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
         if(sigterm_indcator==-1)
         {
@@ -317,13 +325,26 @@ void RR()
             exit(-1);
 
         }
-        
+        printf("RAISING CNTX SWITCH\n");
         //current_process=NULL;
         raise(SIGXCPU);
+        if (!top)
+        {
+            printf("PUSHING PROCESS %d",current_process->id);
+            push(ready_queue,current_process);
+            if (ready_queue&& ready_queue->front)
+                top=ready_queue->front->data;
+            
+        }
+        runProcess(top);
+
+    }
+    else
+    {
+        printf("CURRENT PROCESSS NULLL\n");
         runProcess(top);
     }
-    else if (!current_process)
-        runProcess(top);
+   
     
     
 
@@ -475,10 +496,15 @@ if(!wta_arr)
     printf("RR QUANTUM %d\n",quantum);
     while (scheduling_algo==0 && termList->size!=num_processes_total)
     {
-        while(prevclk+quantum!=getClk());
-        prevclk=getClk();
-        printf("clockking\n");
-        RR();
+       
+        if(getClk()>prevclk+quantum)
+        {
+            prevclk=getClk();
+            //printf("clockking\n Termlist size %d\n",termList->size);
+            RR();
+        }
+       
+    
     }
     while(termList->size!=num_processes_total && scheduling_algo!=0){//printf("%d\n",termList->size);
     }
