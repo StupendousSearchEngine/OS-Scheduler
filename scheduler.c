@@ -50,14 +50,18 @@ FILE*scheduler_perf;
 int total_time=0;
 void decode_with_hash(const char* str, int* num1, int* num2) {
     // Tokenize the input string based on the '#' separator
+    printf("IN DECODE WITH HASHHHH %s",str);
+    char*temp;
+    strcpy(temp,str);
     while(strlen(str)<2)
     {
-        printf("WAITINGGGGGGGGGGGGGGGGGGG\n");
+        printf("WAITINGGGGGGGGGGGGGGGGGGG %s\n",str);
+        sleep(1);
     }
     printf("The current reaper process is %d", current_process->id);
     printf("The reaper of souls Sarah%s\n",str);
     //while(strcmp(str,"0")==0);
-    char* token = strtok((char*)str, "#");
+    char* token = strtok((char*)temp, "#");
     printf("Cold blodded vengful grim reaper Sarah %s\n",token);
     // Convert the first token to an integer
     if (token != NULL) {
@@ -125,24 +129,32 @@ void processHandler(int signum)
     printf("the process send the scheulder a sig or RR\n");
     int rem_time;
     int clk_in_process;
-    current_process->turn_around_time=getClk()-current_process->arrival_time;
+   
     if (current_process)
     {
+        printf("WTTTTTTTTTTTTTTTTTTTTT\n");
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
-
+        
         if(rem_time == 0) {
             current_process->finish_time = clk_in_process;
             current_process->remaining_time = 0;
+            current_process->turn_around_time=getClk()-current_process->arrival_time;
             printf("15641e565");
             fflush(scheduler_log);
             fprintf(scheduler_log,"At time %d process %d stopped arr %d total %d remain %d wait %d\n",current_process->finish_time,current_process->id,
             current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
             push(termList,current_process);
+            printf("TERMMMMMMMMMMMMMMMMMMMMLISTTTTTTTTTTTTTTTT\n");
+            printQueue(termList);
             current_process=NULL;
             raise(SIGXCPU);
             printf("curent process made to be null\n");
         }
         
+    }
+    else 
+    {
+        printf("WHEEEEEEEEEEEEEEEEEEEEEEEE\n");
     }
     printf("IN Process Handler\n");
   
@@ -152,14 +164,30 @@ void processHandler(int signum)
 }
 
 
-void runProcess(struct Process *top)
+void runProcess()
 {
     printf("RUNNIG PROCESS....\n");
-    if(!top)
+    if(current_process&& current_process->remaining_time!=0)
     {
-        printf("top process is null\n");
-        return ;
+        printf("PUSHING id %d\n",current_process->id);
+        push(ready_queue, current_process);
+        printQueue(ready_queue);
+        current_process=NULL;
+        
     }
+    printf("op\n");
+    
+    struct Process *top=NULL;
+    printf("???????????????????????????????????????????????\n");
+    printQueue(ready_queue);
+    if (ready_queue&&ready_queue->size !=0)
+        top=ready_queue->front->data;
+    if (!top)
+    {
+        printf("NO MORE\n");
+        return;
+    }
+    printf("IDK\n");
     printf("running process with id:%d\n", top->id);
     printf("process.remainingTime%d",top->remaining_time);
     printf("process id %d\n",top->process_id);
@@ -184,7 +212,6 @@ void runProcess(struct Process *top)
             perror("execv failed");
         }
         else{ //start
-            struct Process *temp = current_process;
             current_process = top;
             current_process->last_run_time=getClk();
             current_process->wait+=getClk()-current_process->arrival_time;
@@ -195,12 +222,7 @@ void runProcess(struct Process *top)
             printf("popping id %d", ready_queue->front->data->id);
             top->process_id = pid;
             pop(ready_queue);
-            if (temp&&temp->remaining_time!=0)
-            {
-                printf("PUSHING id %d\n",temp->id);
-                push(ready_queue, temp);
-                printQueue(ready_queue);
-            }
+           
             printQueue(ready_queue);
         }
     }
@@ -208,7 +230,7 @@ void runProcess(struct Process *top)
     { // i have forked this process before
         fflush(stdout);
         printf("I saw you before!!!!\n");
-        struct Process *temp = current_process;
+        
         current_process = top;
         current_process->wait += getClk()-current_process->last_run_time;
         current_process->last_run_time=getClk();
@@ -225,14 +247,7 @@ void runProcess(struct Process *top)
             printf("after");
             printf("popping id %d", ready_queue->front->data->id);
             printQueue(ready_queue);
-
             pop(ready_queue);
-            if (temp&&temp->remaining_time!=0)
-            {
-                printf("PUSHING id %d\n",temp->id);
-                push(ready_queue, temp);
-                printQueue(ready_queue);
-            }
             printQueue(ready_queue);
         }
         
@@ -240,9 +255,10 @@ void runProcess(struct Process *top)
 }
 void contextSwitch(int signum)
 {
-    printf("cntc SWUUUU\n");
+    printf("cntc SWUUUU %d\n ", getClk());
     int currclk=getClk();
     while(currclk+ctx_switch_time!=getClk());
+    printf("cntc SWUUUU AFTERRR %d \n", getClk());
     signal(SIGXCPU,contextSwitch);
 }
 
@@ -250,12 +266,10 @@ void contextSwitch(int signum)
 void HPF()
 {
    struct Process *top=NULL;
-    if (ready_queue&& ready_queue->front)
-        top=ready_queue->front->data;
-    if(!current_process && top)
+    if(!current_process)
     {
         printf("Enter HPF...\n");
-        runProcess(top);
+        runProcess();
     }
 }
 void SRTN()
@@ -263,50 +277,13 @@ void SRTN()
     struct Process *top=NULL;
     
     printf("calling SRTN\n");
-    if (ready_queue&& ready_queue->front)
-        top=ready_queue->front->data;
+   
   
-    if (top)
+
+    int rem_time;
+    int clk_in_process;
+    if (current_process)
     {
-        int rem_time;
-        int clk_in_process;
-        if (current_process && top->remaining_time<current_process->remaining_time)
-        {
-            decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
-            ////////////////////////////////////////////////////////////////////  
-            current_process->remaining_time=rem_time;
-            int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
-            if(sigterm_indcator==-1)
-            {
-                perror("error in stopping process!!!\n");
-                exit(-1);
-
-            }
-          
-            //current_process=NULL;
-            raise(SIGXCPU);
-            runProcess(top);
-        }
-        else if (!current_process)
-            runProcess(top);
-    }
-    
-
-}
-
-void RR()
-{
-    struct Process *top=NULL;
-    
-    printf("calling RR\n");
-    if (ready_queue&& ready_queue->front)
-        top=ready_queue->front->data;
-  
-    if (top && current_process)
-    {
-        int rem_time;
-        int clk_in_process;
-    
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
         ////////////////////////////////////////////////////////////////////  
         current_process->remaining_time=rem_time;
@@ -320,10 +297,51 @@ void RR()
         
         //current_process=NULL;
         raise(SIGXCPU);
+    }
+    runProcess();
+    
+    
+
+}
+
+void RR()
+{
+    struct Process *top=NULL;
+    
+    printf("calling RR\n");
+   
+    if (ready_queue&& ready_queue->front)
+        top=ready_queue->front->data;
+    //////////////////////////
+
+    if (current_process)
+    {
+        int rem_time;
+        int clk_in_process;
+        
+        decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
+        ////////////////////////////////////////////////////////////////////  
+        current_process->remaining_time=rem_time;
+        printf("KILLING process ID %d",current_process->process_id);
+        int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
+        if(sigterm_indcator==-1)
+        {
+            perror("error in stopping process!!!\n");
+            exit(-1);
+
+        }
+        printf("RAISING CNTX SWITCH\n");
+        //current_process=NULL;
+        raise(SIGXCPU);
+        runProcess(top);
+
+    }
+    else
+    {
+        printf("CURRENT PROCESSS NULLL\n");
         runProcess(top);
     }
-    else if (!current_process)
-        runProcess(top);
+   
     
     
 
@@ -475,10 +493,17 @@ if(!wta_arr)
     printf("RR QUANTUM %d\n",quantum);
     while (scheduling_algo==0 && termList->size!=num_processes_total)
     {
-        while(prevclk+quantum!=getClk());
-        prevclk=getClk();
-        printf("clockking\n");
-        RR();
+        //printf("prevtime %d cntx %d getclk %d\n",prevclk,quantum,getClk());
+       
+        if(prevclk+quantum +1<= getClk())
+        {
+           
+            //printf("clockking\n Termlist size %d\n",termList->size);
+            RR();
+            prevclk=getClk();
+            
+          
+        }
     }
     while(termList->size!=num_processes_total && scheduling_algo!=0){//printf("%d\n",termList->size);
     }
