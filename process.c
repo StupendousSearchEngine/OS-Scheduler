@@ -56,6 +56,7 @@ int main(int agrc, char * argv[])
     while (remainingtime > 0)
     {
         if(prev_time_seen != getClk()) {
+            printf("Prev time in process : %d, Current clk: %d",prev_time_seen,getClk());
             remainingtime--;
             char str[5];
             sprintf(str, "%d", remainingtime);
