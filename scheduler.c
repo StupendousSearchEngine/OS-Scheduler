@@ -10,9 +10,10 @@ struct msg_buffer {
 int id,arrival_time,run_time,priority,remaining_time,finish_time,response_time;
 //I'm gonna add something for RR sake but we may remmove it later
 int last_run_time;
+
 pid_t process_id;
 };
-
+int prevclk =-1;
  /*
     1. Start a new process. (Fork it and give it its parameters.)
     2. Switch between two processes according to the scheduling algorithm. (Stop the
@@ -214,6 +215,7 @@ void runProcess()
         else{ //start
             current_process = top;
             current_process->last_run_time=getClk();
+            prevclk=getClk();
             current_process->wait+=getClk()-current_process->arrival_time;
             fflush(scheduler_log);
 
@@ -234,7 +236,7 @@ void runProcess()
         current_process = top;
         current_process->wait += getClk()-current_process->last_run_time;
         current_process->last_run_time=getClk();
-        fprintf(scheduler_log,"At time %d process %d resumed arr %d total %d remain %d wait %d",getClk(),current_process->id,
+        fprintf(scheduler_log,"At time %d process %d resumed arr %d total %d remain %d wait %d\n",getClk(),current_process->id,
         current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
         if (kill(top->process_id, SIGCONT) == -1) {
             perror("Error sending SIGCONT signal");
@@ -244,6 +246,7 @@ void runProcess()
         } 
         else 
         {
+            prevclk=getClk();
             printf("after");
             printf("popping id %d", ready_queue->front->data->id);
             printQueue(ready_queue);
@@ -308,21 +311,16 @@ void RR()
 {
     struct Process *top=NULL;
     
-    printf("calling RR\n");
-   
+    
     if (ready_queue&& ready_queue->front)
         top=ready_queue->front->data;
-    //////////////////////////
+    
 
+   
     if (current_process)
     {
-        int rem_time;
-        int clk_in_process;
-        
-        decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
-        ////////////////////////////////////////////////////////////////////  
-        current_process->remaining_time=rem_time;
-        printf("KILLING process ID %d",current_process->process_id);
+        fflush(stdout);
+        printf("8ariba l nas 8aribal donia dia\n");
         int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
         if(sigterm_indcator==-1)
         {
@@ -330,6 +328,15 @@ void RR()
             exit(-1);
 
         }
+        int rem_time;
+        int clk_in_process;
+        
+        decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
+        ////////////////////////////////////////////////////////////////////  
+        current_process->remaining_time=rem_time;
+        printf("KILLING process ID %d",current_process->process_id);
+        
+        
         printf("RAISING CNTX SWITCH\n");
         //current_process=NULL;
         raise(SIGXCPU);
@@ -489,24 +496,12 @@ if(!wta_arr)
         exit(-1);
     }
 
-    int prevclk=getClk();
+
     printf("RR QUANTUM %d\n",quantum);
-    while (scheduling_algo==0 && termList->size!=num_processes_total)
-    {
-        //printf("prevtime %d cntx %d getclk %d\n",prevclk,quantum,getClk());
-       
-        if(prevclk+quantum +1<= getClk())
-        {
-           
-            //printf("clockking\n Termlist size %d\n",termList->size);
+    while (scheduling_algo==0 && termList->size!=num_processes_total )
+        if(current_process && prevclk+quantum==getClk())
             RR();
-            prevclk=getClk();
-            
-          
-        }
-    }
-    while(termList->size!=num_processes_total && scheduling_algo!=0){//printf("%d\n",termList->size);
-    }
+    while(termList->size!=num_processes_total && scheduling_algo!=0);
     printf("hello bishoy \n");
     write_perf();
     fclose(scheduler_perf);

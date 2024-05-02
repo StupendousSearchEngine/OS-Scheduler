@@ -73,18 +73,18 @@ int main(int agrc, char * argv[])
         }
 
     }
-    if(remainingtime == 0){
-        char str[5];
-        sprintf(str, "%d", remainingtime);
-        char* message = concatenate_with_hash(remainingtime,getClk());
-        strcpy((char *)shmaddr_for_process, message);
-        printf("process finshed \n");
-        kill(getppid(),SIGUSR2);
-    }
+//////////////////////////////////////
+    char str[5];
+    sprintf(str, "%d", remainingtime);
+    char* message = concatenate_with_hash(remainingtime,getClk());
+    strcpy((char *)shmaddr_for_process, message);
+    printf("process finshed \n");
+    kill(getppid(),SIGUSR2);
+    
 
-   //destroyClk(false);
-   // printf("Process commiting self exit game\n");
-   //raise(SIGKILL);
+   destroyClk(false);
+   printf("Process commiting self exit game\n");
+   raise(SIGKILL);
 
     return 0;
 }
