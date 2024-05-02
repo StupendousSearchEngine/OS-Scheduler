@@ -86,7 +86,6 @@ int main(int agrc, char * argv[])
 
         destroyClk(false);
         printf("Process commiting self exit game\n");
-        raise(SIGKILL);
     }
     return 0;
 }

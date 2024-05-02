@@ -4,7 +4,7 @@
 #include<math.h>
 #include"queue.h"
 #define SHM_SIZE 4096
-
+void contextSwitch();
 struct msg_buffer {
     long msg_type;
 int id,arrival_time,run_time,priority,remaining_time,finish_time,response_time;
@@ -13,6 +13,7 @@ int last_run_time;
 
 pid_t process_id;
 };
+void RR();
 int prevclk =-1;
  /*
     1. Start a new process. (Fork it and give it its parameters.)
@@ -57,7 +58,7 @@ void decode_with_hash(const char* str, int* num1, int* num2) {
     temp = (char *)malloc(strlen(str) + 1);
     if (temp == NULL) {
         printf("Memory allocation failed\n");
-        return 1;
+        return ;
     }
 
     // Copy the string
@@ -131,13 +132,12 @@ void receive_process()
 void handler(int signum)
 {
     receive_process();
-    if (scheduling_algo!=0 || current_process==NULL)
+    if (scheduling_algo!=0)
         pickSchedulingAlgo();
-    printf("end handler\n");
     signal(SIGUSR1,handler);
 }
 
-void processHandler(int signum)
+void processDone(int signum)
 {
     printf("CURRENT PROCESS TERMINATING ID %d\n",current_process->id);
     fflush(stdout);
@@ -152,8 +152,6 @@ void processHandler(int signum)
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
         
         if(rem_time == 0) {
-            printf("NOT LIKE THIS BOOOOOOOOOOOOOO\n");
-            fflush(stdout);
             current_process->finish_time = clk_in_process;
             current_process->remaining_time = 0;
             current_process->turn_around_time=getClk()-current_process->arrival_time;
@@ -164,147 +162,124 @@ void processHandler(int signum)
             push(termList,current_process);
             printf("TERMMMMMMMMMMMMMMMMMMMMLISTTTTTTTTTTTTTTTT\n");
             printQueue(termList);
+            printf("QUEUE?\n");
+            printQueue(ready_queue);
             current_process=NULL;
-            raise(SIGXCPU);
-            printf("curent process made to be null\n");
-            if (scheduling_algo!=0 ||(scheduling_algo==0 && !current_process))
-                pickSchedulingAlgo();
+            contextSwitch();
+            pickSchedulingAlgo();
         }
         
     }
     else 
     {
-        printf("WHEEEEEEEEEEEEEEEEEEEEEEEE\n");
+        printf("WEIRD\n");
     }
     printf("IN Process Handler\n");
   
     
    
-    signal(SIGUSR1,handler);
+    signal(SIGUSR2,processDone);
 }
 
 
 void runProcess()
 {
-    printf("RUNNIG PROCESS....\n");
-    if(current_process&& current_process->remaining_time!=0)
-    {
-        printf("PUSHING id %d\n",current_process->id);
-        push(ready_queue, current_process);
-        printQueue(ready_queue);
-        current_process=NULL;
-        
-    }
-    printf("op\n");
-    
     struct Process *top=NULL;
-    printf("???????????????????????????????????????????????\n");
-    printQueue(ready_queue);
+    printf("In Running process function");
+    
+    
+    if (current_process&&current_process->remaining_time>0)
+        push(ready_queue,current_process);
     if (ready_queue&&ready_queue->size !=0)
         top=ready_queue->front->data;
-    if (!top)
+    if(top)
     {
-        printf("NO MORE\n");
-        return;
-    }
-    printf("IDK\n");
-    printf("running process with id:%d\n", top->id);
-    printf("process.remainingTime%d",top->remaining_time);
-    printf("process id %d\n",top->process_id);
-
-    if(top->process_id == -1)
-    { // i have never forked this process before
-        int pid = fork();
-        ////////////////////////////
-        if(pid==0){
-            if (system("gcc process.c -o process.o") != 0) {
-                perror("Error compiling process.c\n");
-                exit(EXIT_FAILURE);
+        if(top->process_id == -1) //new process
+        {
+            int pid = fork();
+            ////////////////////////////
+            if(pid==0){
+                if (system("gcc process.c -o process.o") != 0) {
+                    perror("Error compiling process.c\n");
+                    exit(EXIT_FAILURE);
+                }
+                else if (pid==-1)
+                {
+                    perror("Error in forking new process\n");
+                    exit(-1);
+                }
+                char temp1[10];
+                sprintf(temp1, "%d", top->remaining_time);
+                char *args[] = {"process.o", temp1, NULL};
+                execv("./process.o", args);
+                perror("execv failed");
             }
-            else if (pid==-1)
-            {
-                perror("Error in forking new process\n");
-                exit(-1);
+            else{
+                prevclk=getClk();
+                printf("PROCESS ID in 1st else%d\n ", getpid());
+                current_process = top;
+                current_process->last_run_time=getClk();
+                current_process->wait+=getClk()-current_process->arrival_time;
+                fflush(scheduler_log);
+                fprintf(scheduler_log,"At time %d process %d started arr %d total %d remain %d wait %d \n",getClk(),current_process->id,
+                current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
+                fflush(scheduler_log);
+                top->process_id = pid;
+                pop(ready_queue);
+                
             }
-            char temp1[10];
-            sprintf(temp1, "%d", top->remaining_time);
-            char *args[] = {"process.o", temp1, NULL};
-            execv("./process.o", args);
-            perror("execv failed");
         }
-        else{ //start
-            printf("PROCESS ID in 1st else%d\n ", getpid());
+        else
+        {
+            printf("I saw you before!!!!\n");   
             current_process = top;
+            current_process->wait += getClk()-current_process->last_run_time;
             current_process->last_run_time=getClk();
-            prevclk=getClk();
-            current_process->wait+=getClk()-current_process->arrival_time;
             fflush(scheduler_log);
-
-            fprintf(scheduler_log,"At time %d process %d started arr %d total %d remain %d wait %d \n",getClk(),current_process->id,
+            fprintf(scheduler_log,"At time %d process %d resumed arr %d total %d remain %d wait %d\n",getClk(),current_process->id,
             current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
             fflush(scheduler_log);
-            printf("popping id %d", ready_queue->front->data->id);
-            top->process_id = pid;
-            pop(ready_queue);
-           
-            printQueue(ready_queue);
+            if (kill(top->process_id, SIGCONT) == -1) {
+                perror("Error sending SIGCONT signal");
+                printf("errormsg");
+                exit(-1);
+                
+            } 
+            else 
+            {
+                prevclk=getClk();
+                pop(ready_queue);
+            }
         }
     }
-    else //resume
-    { // i have forked this process before
-        printf("PROCESS ID in 2nd else%d\n ", getpid());
-        fflush(stdout);
-        printf("I saw you before!!!!\n");
-        
-        current_process = top;
-        current_process->wait += getClk()-current_process->last_run_time;
-        current_process->last_run_time=getClk();
-        fflush(scheduler_log);
-        fprintf(scheduler_log,"At time %d process %d resumed arr %d total %d remain %d wait %d\n",getClk(),current_process->id,
-        current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
-        fflush(scheduler_log);
-        if (kill(top->process_id, SIGCONT) == -1) {
-            perror("Error sending SIGCONT signal");
-            printf("errormsg");
-            exit(-1);
-            
-        } 
-        else 
-        {
-            prevclk=getClk();
-            printf("after");
-            printf("popping id %d", ready_queue->front->data->id);
-            printQueue(ready_queue);
-            pop(ready_queue);
-            printQueue(ready_queue);
-        }
-        
-    }
+    else
+    {
+        printf("There are no proceses to run\n");
+    } 
+    
+   
 }
-void contextSwitch(int signum)
+void contextSwitch()
 {
     printf("cntc SWUUUU %d\n ", getClk());
     int currclk=getClk();
     while(currclk+ctx_switch_time!=getClk());
     printf("cntc SWUUUU AFTERRR %d \n", getClk());
-    signal(SIGXCPU,contextSwitch);
 }
 
 
 void HPF()
 {
-   struct Process *top=NULL;
     if(!current_process)
     {
             
         printf("Enter HPF...\n");
         runProcess();
-       // sleep(2);
+       
     }
 }
 void SRTN()
 {
-    struct Process *top=NULL;
     
     printf("calling SRTN\n");
    
@@ -314,19 +289,24 @@ void SRTN()
     int clk_in_process;
     if (current_process)
     {
+        int prev=getClk();
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
         ////////////////////////////////////////////////////////////////////  
         current_process->remaining_time=rem_time;
-        int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
-        if(sigterm_indcator==-1)
+        if(current_process->remaining_time>0)
         {
-            perror("error in stopping process!!!\n");
-            exit(-1);
+            int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
+            if(sigterm_indcator==-1)
+            {
+                perror("error in stopping process!!!\n");
+                exit(-1);
 
+            }
+            //current_process=NULL;
+            contextSwitch();
+            
         }
-        
-        //current_process=NULL;
-        raise(SIGXCPU);
+     
     }
     runProcess();
     
@@ -336,55 +316,28 @@ void SRTN()
 
 void RR()
 {
-    struct Process *top=NULL;
-    
-    
-    if (ready_queue&& ready_queue->front)
-        top=ready_queue->front->data;
-    
-
-   
+    printf("calling RR\n");
+    int rem_time;
+    int clk_in_process;
     if (current_process)
     {
-        fflush(stdout);
-        //printf("RR\n"); //please do not remove 
-        int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
-        if(sigterm_indcator==-1)
-        {
-            perror("error in stopping process!!!\n");
-            exit(-1);
-
-        }
-        int rem_time;
-        int clk_in_process;
-        
+        int prev=getClk();
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
-        ////////////////////////////////////////////////////////////////////  
         current_process->remaining_time=rem_time;
-        if (current_process->remaining_time==0)
-       
-        printf("KILLING process ID %d",current_process->process_id);
-        if(current_process && current_process->remaining_time==0)
+        if(current_process->remaining_time>0)
         {
-            kill(current_process->process_id,SIGCONT);
-        }        
-        
-        printf("RAISING CNTX SWITCH\n");
-        //current_process=NULL;
-        raise(SIGXCPU);
-        runProcess(top);
-        printf("heleeeeeeeeeeeepppp\n");
+            int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
+            if(sigterm_indcator==-1)
+            {
+                perror("error in stopping process!!!\n");
+                exit(-1);
 
+            }
+            contextSwitch();
+        }
+     
     }
-    else
-    {
-        printf("CURRENT PROCESSS NULLL\n");
-        runProcess(top);
-    }
-   
-    
-    
-
+    runProcess();
 }
 int total_execution_time=0;
 double total_wta=0;
@@ -466,9 +419,6 @@ void pickSchedulingAlgo()
 
 int main(int argc, char * argv[])
 {
-    //TODO implement the scheduler :)
-    //upon termination release the clock resources.
-    printf("Scheduler main\n");
     scheduler_log=fopen("schedulder.log","w");
     scheduler_perf=fopen("scheduler.perf","w");
     int key = ftok("shmkey",70);
@@ -488,8 +438,8 @@ int main(int argc, char * argv[])
     key_id=ftok("keyfile",65);
     msgq_id = msgget(key_id, 0666 | IPC_CREAT);
     signal(SIGUSR1,handler);
-    signal(SIGUSR2,processHandler);
-    signal(SIGXCPU,contextSwitch);
+    signal(SIGUSR2,processDone);
+  
     initClk();
     termList = initQueue(0);
     printf("verfy Pid %d\n",getpid());
@@ -498,15 +448,14 @@ int main(int argc, char * argv[])
     ctx_switch_time=atoi(argv[3]);
     num_processes_total = atoi(argv[2]);
     wta_arr=malloc(num_processes_total*sizeof(struct Process));
-if(!wta_arr)
-{
-    printf("Evil Sarah*2\n");
-}
+    if(!wta_arr)
+    {
+        perror("Could not allocate memory\n");
+        exit(-1);
+    }
     
     if (argc==5)
         quantum= atoi(argv[4]);
-    //add a queue for scheduling
-
     if (strcmp(argv[1],"RR")==0)
     {
         scheduling_algo=0;
@@ -531,12 +480,14 @@ if(!wta_arr)
 
 
     printf("RR QUANTUM %d\n",quantum);
-    while (scheduling_algo==0 && termList->size!=num_processes_total )
-        if(current_process && prevclk+quantum == getClk())
-            RR();
+    while(scheduling_algo==0 && termList->size!=num_processes_total)
+    {
+        while(prevclk+quantum!=getClk());
+        RR();
+    }
         
     while(termList->size!=num_processes_total && scheduling_algo!=0);
-    printf("hello bishoy \n");
+
     write_perf();
     fclose(scheduler_perf);
     fclose(scheduler_log);
