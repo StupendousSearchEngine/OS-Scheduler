@@ -258,6 +258,7 @@ the parent will execute the next lines and fork the clk
 
     int returnStatus;
     printf("this is pid %d\n",scheduler_pid);
+    fflush(stdout);
     waitpid(scheduler_pid, &returnStatus, 0);
 //End of TODO_1.3
     // TODO Generation Main Loop

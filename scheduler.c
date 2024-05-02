@@ -52,18 +52,23 @@ int total_time=0;
 void decode_with_hash(const char* str, int* num1, int* num2) {
     // Tokenize the input string based on the '#' separator
     printf("IN DECODE WITH HASHHHH %s",str);
+    fflush(stdout);
     char*temp;
-    strcpy(temp,str);
+    strcpy(temp , str);
     while(strlen(str)<2)
     {
         printf("WAITINGGGGGGGGGGGGGGGGGGG %s\n",str);
+        fflush(stdout);
         sleep(1);
     }
     printf("The current reaper process is %d", current_process->id);
+    fflush(stdout);
     printf("The reaper of souls Sarah%s\n",str);
+    fflush(stdout);
     //while(strcmp(str,"0")==0);
     char* token = strtok((char*)temp, "#");
     printf("Cold blodded vengful grim reaper Sarah %s\n",token);
+    fflush(stdout);
     // Convert the first token to an integer
     if (token != NULL) {
         printf("first token %s",token);
@@ -71,10 +76,11 @@ void decode_with_hash(const char* str, int* num1, int* num2) {
         printf("num1 %d",*num1);
     } else {
         // If the token is NULL, something went wrong
-        printf("Error: Could not extract first number\n");
+        perror("Error: Could not extract first number\n");
         exit(1);
     }
     printf("decoderremtime %d",*num1);
+    fflush(stdout);
     // Get the next token (the second number)
     token = strtok(NULL, "#");
 
@@ -83,7 +89,7 @@ void decode_with_hash(const char* str, int* num1, int* num2) {
         *num2 = atoi(token);
     } else {
         // If the token is NULL, something went wrong
-        printf("Error: Could not extract second number\n");
+        perror("Error: Could not extract second number\n");
         exit(1);
     }
 }
@@ -127,13 +133,15 @@ void handler(int signum)
 void processHandler(int signum)
 {
     printf("CURRENT PROCESS TERMINATING ID %d",current_process->id);
+    fflush(stdout);
     printf("the process send the scheulder a sig or RR\n");
+    fflush(stdout);
     int rem_time;
     int clk_in_process;
    
     if (current_process)
     {
-        printf("WTTTTTTTTTTTTTTTTTTTTT\n");
+        
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
         
         if(rem_time == 0) {
@@ -344,8 +352,13 @@ void RR()
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
         ////////////////////////////////////////////////////////////////////  
         current_process->remaining_time=rem_time;
+        if (current_process->remaining_time==0)
+       
         printf("KILLING process ID %d",current_process->process_id);
-        
+        if(current_process && current_process->remaining_time==0)
+        {
+            kill(current_process->process_id,SIGCONT);
+        }        
         
         printf("RAISING CNTX SWITCH\n");
         //current_process=NULL;
@@ -509,12 +522,9 @@ if(!wta_arr)
 
     printf("RR QUANTUM %d\n",quantum);
     while (scheduling_algo==0 && termList->size!=num_processes_total )
-        if(current_process&& current_process->remaining_time>0 && prevclk+quantum == getClk())
+        if(current_process && prevclk+quantum == getClk())
             RR();
-        else if(current_process && current_process->remaining_time==0)
-        {
-            kill(current_process->process_id,SIGCONT);
-        }
+        
     while(termList->size!=num_processes_total && scheduling_algo!=0);
     printf("hello bishoy \n");
     write_perf();

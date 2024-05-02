@@ -74,17 +74,19 @@ int main(int agrc, char * argv[])
 
     }
 //////////////////////////////////////
-    char str[5];
-    sprintf(str, "%d", remainingtime);
-    strcpy((char *)shmaddr_for_process, concatenate_with_hash(remainingtime,getClk()));
-    ////////////////////////////////////
-    kill(getppid(),SIGUSR2);
-    printf("IS KILL SKIPPED?\n");
-    
+    if (remainingtime==0)
+    {
+        char str[5];
+        sprintf(str, "%d", remainingtime);
+        strcpy((char *)shmaddr_for_process, concatenate_with_hash(remainingtime,getClk()));
+        ////////////////////////////////////
+        kill(getppid(),SIGUSR2);
+        printf("IS KILL SKIPPED?\n");
 
-   destroyClk(false);
-   printf("Process commiting self exit game\n");
-   raise(SIGKILL);
 
+        destroyClk(false);
+        printf("Process commiting self exit game\n");
+        raise(SIGKILL);
+    }
     return 0;
 }
