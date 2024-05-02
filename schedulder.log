@@ -1,2 +1,5 @@
 At time 1 process 1 started arr 1 total 5 remain 5 wait 0 
-At time 5 process 2 started arr 5 total 3 remain 3 wait 0 
+At time 4 process 1 resumed arr 1 total 5 remain 3 wait 3
+At time 7 process 1 resumed arr 1 total 5 remain 2 wait 6
+At time 10 process 1 resumed arr 1 total 5 remain 1 wait 9
+At time 11 process 1 stopped arr 1 total 5 remain 0 wait 9

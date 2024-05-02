@@ -60,7 +60,7 @@ int main(int agrc, char * argv[])
         
      
         if(prev_time_seen != getClk()) {
-            printf("Prev time in process : %d, Current clk: %d",prev_time_seen,getClk());
+            printf("process id:%d Prev time in process : %d, Current clk: %d",getpid(),prev_time_seen,getClk());
             remainingtime--;
             
             char str[5];
@@ -80,12 +80,14 @@ int main(int agrc, char * argv[])
         sprintf(str, "%d", remainingtime);
         strcpy((char *)shmaddr_for_process, concatenate_with_hash(remainingtime,getClk()));
         ////////////////////////////////////
+        fflush(stdout);
         kill(getppid(),SIGUSR2);
         printf("IS KILL SKIPPED?\n");
 
 
         destroyClk(false);
         printf("Process commiting self exit game\n");
+        fflush(stdout);
         raise(SIGKILL);
     }
     return 0;

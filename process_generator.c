@@ -143,8 +143,6 @@ to send it as and argument to scheduler
         perror("Error in forking scheduler process!!\n");
     } else if (pid == 0) {
         printf("Scheduling..\n");
-        printf("Scheduler process not running\n");
-
         // Compile the scheduler.c to scheduler.o
         if (system("gcc scheduler.c -o scheduler.o -lm") != 0) {
             perror("Error compiling scheduler.c\n");
