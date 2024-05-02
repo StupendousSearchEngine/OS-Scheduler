@@ -1,0 +1,7 @@
+scheduler.c: In function ‘decode_with_hash’:
+scheduler.c:60:16: warning: ‘return’ with a value, in function returning void
+   60 |         return 1;
+      |                ^
+scheduler.c:52:6: note: declared here
+   52 | void decode_with_hash(const char* str, int* num1, int* num2) {
+      |      ^~~~~~~~~~~~~~~~

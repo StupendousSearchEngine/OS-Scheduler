@@ -53,8 +53,15 @@ void decode_with_hash(const char* str, int* num1, int* num2) {
     // Tokenize the input string based on the '#' separator
     printf("IN DECODE WITH HASHHHH %s",str);
     fflush(stdout);
-    char*temp;
-    strcpy(temp , str);
+    char *temp = NULL;
+    temp = (char *)malloc(strlen(str) + 1);
+    if (temp == NULL) {
+        printf("Memory allocation failed\n");
+        return 1;
+    }
+
+    // Copy the string
+    strcpy(temp, str);
     while(strlen(str)<2)
     {
         printf("WAITINGGGGGGGGGGGGGGGGGGG %s\n",str);
@@ -132,7 +139,7 @@ void handler(int signum)
 
 void processHandler(int signum)
 {
-    printf("CURRENT PROCESS TERMINATING ID %d",current_process->id);
+    printf("CURRENT PROCESS TERMINATING ID %d\n",current_process->id);
     fflush(stdout);
     printf("the process send the scheulder a sig or RR\n");
     fflush(stdout);
@@ -145,6 +152,8 @@ void processHandler(int signum)
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
         
         if(rem_time == 0) {
+            printf("NOT LIKE THIS BOOOOOOOOOOOOOO\n");
+            fflush(stdout);
             current_process->finish_time = clk_in_process;
             current_process->remaining_time = 0;
             current_process->turn_around_time=getClk()-current_process->arrival_time;
@@ -338,7 +347,7 @@ void RR()
     if (current_process)
     {
         fflush(stdout);
-        printf("RR\n"); //please do not remove 
+        //printf("RR\n"); //please do not remove 
         int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
         if(sigterm_indcator==-1)
         {
@@ -364,6 +373,7 @@ void RR()
         //current_process=NULL;
         raise(SIGXCPU);
         runProcess(top);
+        printf("heleeeeeeeeeeeepppp\n");
 
     }
     else
