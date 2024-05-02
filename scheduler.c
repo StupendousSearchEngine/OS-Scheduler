@@ -126,7 +126,7 @@ void handler(int signum)
 
 void processHandler(int signum)
 {
-
+    printf("CURRENT PROCESS TERMINATING ID %d",current_process->id);
     printf("the process send the scheulder a sig or RR\n");
     int rem_time;
     int clk_in_process;
@@ -140,16 +140,18 @@ void processHandler(int signum)
             current_process->finish_time = clk_in_process;
             current_process->remaining_time = 0;
             current_process->turn_around_time=getClk()-current_process->arrival_time;
-            printf("15641e565");
             fflush(scheduler_log);
             fprintf(scheduler_log,"At time %d process %d stopped arr %d total %d remain %d wait %d\n",current_process->finish_time,current_process->id,
             current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
+            fflush(scheduler_log);
             push(termList,current_process);
             printf("TERMMMMMMMMMMMMMMMMMMMMLISTTTTTTTTTTTTTTTT\n");
             printQueue(termList);
             current_process=NULL;
             raise(SIGXCPU);
             printf("curent process made to be null\n");
+            if (scheduling_algo!=0 ||(scheduling_algo==0 && !current_process))
+                pickSchedulingAlgo();
         }
         
     }
@@ -159,8 +161,8 @@ void processHandler(int signum)
     }
     printf("IN Process Handler\n");
   
-    pickSchedulingAlgo();
-    printf("end handler\n");
+    
+   
     signal(SIGUSR1,handler);
 }
 
@@ -196,6 +198,7 @@ void runProcess()
     if(top->process_id == -1)
     { // i have never forked this process before
         int pid = fork();
+        ////////////////////////////
         if(pid==0){
             if (system("gcc process.c -o process.o") != 0) {
                 perror("Error compiling process.c\n");
@@ -213,6 +216,7 @@ void runProcess()
             perror("execv failed");
         }
         else{ //start
+            printf("PROCESS ID in 1st else%d\n ", getpid());
             current_process = top;
             current_process->last_run_time=getClk();
             prevclk=getClk();
@@ -221,6 +225,7 @@ void runProcess()
 
             fprintf(scheduler_log,"At time %d process %d started arr %d total %d remain %d wait %d \n",getClk(),current_process->id,
             current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
+            fflush(scheduler_log);
             printf("popping id %d", ready_queue->front->data->id);
             top->process_id = pid;
             pop(ready_queue);
@@ -230,14 +235,17 @@ void runProcess()
     }
     else //resume
     { // i have forked this process before
+        printf("PROCESS ID in 2nd else%d\n ", getpid());
         fflush(stdout);
         printf("I saw you before!!!!\n");
         
         current_process = top;
         current_process->wait += getClk()-current_process->last_run_time;
         current_process->last_run_time=getClk();
+        fflush(scheduler_log);
         fprintf(scheduler_log,"At time %d process %d resumed arr %d total %d remain %d wait %d\n",getClk(),current_process->id,
         current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
+        fflush(scheduler_log);
         if (kill(top->process_id, SIGCONT) == -1) {
             perror("Error sending SIGCONT signal");
             printf("errormsg");
@@ -271,8 +279,10 @@ void HPF()
    struct Process *top=NULL;
     if(!current_process)
     {
+            
         printf("Enter HPF...\n");
         runProcess();
+       // sleep(2);
     }
 }
 void SRTN()
@@ -320,7 +330,7 @@ void RR()
     if (current_process)
     {
         fflush(stdout);
-        printf("8ariba l nas 8aribal donia dia\n");
+        printf("RR\n"); //please do not remove 
         int sigterm_indcator = kill(current_process->process_id,SIGSTOP);
         if(sigterm_indcator==-1)
         {
@@ -499,8 +509,12 @@ if(!wta_arr)
 
     printf("RR QUANTUM %d\n",quantum);
     while (scheduling_algo==0 && termList->size!=num_processes_total )
-        if(current_process && prevclk+quantum==getClk())
+        if(current_process&& current_process->remaining_time>0 && prevclk+quantum == getClk())
             RR();
+        else if(current_process && current_process->remaining_time==0)
+        {
+            kill(current_process->process_id,SIGCONT);
+        }
     while(termList->size!=num_processes_total && scheduling_algo!=0);
     printf("hello bishoy \n");
     write_perf();

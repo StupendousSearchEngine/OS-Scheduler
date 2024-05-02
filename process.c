@@ -76,10 +76,10 @@ int main(int agrc, char * argv[])
 //////////////////////////////////////
     char str[5];
     sprintf(str, "%d", remainingtime);
-    char* message = concatenate_with_hash(remainingtime,getClk());
-    strcpy((char *)shmaddr_for_process, message);
-    printf("process finshed \n");
+    strcpy((char *)shmaddr_for_process, concatenate_with_hash(remainingtime,getClk()));
+    ////////////////////////////////////
     kill(getppid(),SIGUSR2);
+    printf("IS KILL SKIPPED?\n");
     
 
    destroyClk(false);
