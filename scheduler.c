@@ -52,13 +52,13 @@ FILE*scheduler_perf;
 int total_time=0;
 void decode_with_hash(const char* str, int* num1, int* num2) {
     // Tokenize the input string based on the '#' separator
-    printf("IN DECODE WITH HASHHHH %s",str);
+    printf("IN DECODE WITH HASHHHH %s\n",str);
     fflush(stdout);
     char *temp = NULL;
     temp = (char *)malloc(strlen(str) + 1);
     if (temp == NULL) {
-        printf("Memory allocation failed\n");
-        return ;
+        perror("Memory allocation failed\n");
+        exit(-1);
     }
 
     // Copy the string
@@ -69,26 +69,19 @@ void decode_with_hash(const char* str, int* num1, int* num2) {
         fflush(stdout);
         sleep(1);
     }
-    printf("The current reaper process is %d", current_process->id);
-    fflush(stdout);
-    printf("The reaper of souls Sarah%s\n",str);
-    fflush(stdout);
-    //while(strcmp(str,"0")==0);
+  
     char* token = strtok((char*)temp, "#");
-    printf("Cold blodded vengful grim reaper Sarah %s\n",token);
-    fflush(stdout);
-    // Convert the first token to an integer
+   
     if (token != NULL) {
-        printf("first token %s",token);
+     
         *num1 = atoi(token);
-        printf("num1 %d",*num1);
+      
     } else {
         // If the token is NULL, something went wrong
         perror("Error: Could not extract first number\n");
-        exit(1);
+        exit(-1);
     }
-    printf("decoderremtime %d",*num1);
-    fflush(stdout);
+   
     // Get the next token (the second number)
     token = strtok(NULL, "#");
 
@@ -98,7 +91,7 @@ void decode_with_hash(const char* str, int* num1, int* num2) {
     } else {
         // If the token is NULL, something went wrong
         perror("Error: Could not extract second number\n");
-        exit(1);
+        exit(-1);
     }
 }
 
@@ -122,8 +115,9 @@ void receive_process()
         recieved_process->id =  message.id;
         recieved_process->process_id =  message.process_id;
         push(ready_queue, recieved_process);
+        
+        printf("process with id %d pushed\n",recieved_process->id);
         printQueue(ready_queue);
-        printf("process with id %d pushed",recieved_process->id);
         int recv=msgrcv(msgq_id,(void *)&message,sizeof(struct msg_buffer) - sizeof(long),1,0);
     }
     
@@ -132,8 +126,9 @@ void receive_process()
 void handler(int signum)
 {
     receive_process();
-    if (scheduling_algo!=0)
+    if (scheduling_algo!=0 || scheduling_algo==0 && !current_process)
         pickSchedulingAlgo();
+    
     signal(SIGUSR1,handler);
 }
 
@@ -141,8 +136,7 @@ void processDone(int signum)
 {
     printf("CURRENT PROCESS TERMINATING ID %d\n",current_process->id);
     fflush(stdout);
-    printf("the process send the scheulder a sig or RR\n");
-    fflush(stdout);
+   
     int rem_time;
     int clk_in_process;
    
@@ -160,7 +154,8 @@ void processDone(int signum)
             current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
             fflush(scheduler_log);
             push(termList,current_process);
-            printf("TERMMMMMMMMMMMMMMMMMMMMLISTTTTTTTTTTTTTTTT\n");
+            printf("process with id %d pushed into termList\n",current_process->id);
+            current_process=NULL;
             printQueue(termList);
             printf("QUEUE?\n");
             printQueue(ready_queue);
@@ -185,11 +180,15 @@ void processDone(int signum)
 void runProcess()
 {
     struct Process *top=NULL;
-    printf("In Running process function");
+    //printf("In Running process function");
     
     
     if (current_process&&current_process->remaining_time>0)
+    {
+        printf("process with id %d pushed\n",current_process->id);
         push(ready_queue,current_process);
+    }
+   
     if (ready_queue&&ready_queue->size !=0)
         top=ready_queue->front->data;
     if(top)
@@ -216,7 +215,7 @@ void runProcess()
             }
             else{
                 prevclk=getClk();
-                printf("PROCESS ID in 1st else%d\n ", getpid());
+             
                 current_process = top;
                 current_process->last_run_time=getClk();
                 current_process->wait+=getClk()-current_process->arrival_time;
@@ -225,7 +224,9 @@ void runProcess()
                 current_process->arrival_time,current_process->run_time,current_process->remaining_time,current_process->wait);
                 fflush(scheduler_log);
                 top->process_id = pid;
+                printf("popping process with id %d in runprocess 1st else\n",top->id);
                 pop(ready_queue);
+                printQueue(ready_queue);
                 
             }
         }
@@ -241,20 +242,21 @@ void runProcess()
             fflush(scheduler_log);
             if (kill(top->process_id, SIGCONT) == -1) {
                 perror("Error sending SIGCONT signal");
-                printf("errormsg");
                 exit(-1);
                 
             } 
             else 
             {
                 prevclk=getClk();
+                printf("popping process with id %d in runprocess second else\n",top->id);
                 pop(ready_queue);
+                printQueue(ready_queue);
             }
         }
     }
     else
     {
-        printf("There are no proceses to run\n");
+        //printf("There are no proceses to run\n");
     } 
     
    
@@ -316,7 +318,7 @@ void SRTN()
 
 void RR()
 {
-    printf("calling RR\n");
+    //printf("calling RR\n");
     int rem_time;
     int clk_in_process;
     if (current_process)
@@ -334,10 +336,22 @@ void RR()
 
             }
             contextSwitch();
+            runProcess();
+        }
+        else if (current_process->remaining_time==0)
+        {
+            printf("process id %d needs a lil push",current_process->id);
+            int size = termList->size;
+            kill(current_process->process_id,SIGCONT);
+            while(termList->size == size);
         }
      
     }
-    runProcess();
+    else
+    {
+        runProcess();
+    }
+    
 }
 int total_execution_time=0;
 double total_wta=0;
@@ -350,20 +364,22 @@ void calculate_statistics()
 
 while(termList->size>0 && termList->front->data)
 {
-    printf("Evil sarah***\n");
+
     total_execution_time+=termList->front->data->run_time;
-    printf("the devil himself sarah11 %d\n",termList->size);
+
 
     total_waiting_time=termList->front->data->wait;
-        printf("the devil himself sarah**2 %d\n",termList->size);
+
 printf("%d\n",termList->front->data->run_time);
     total_wta=(termList->front->data->turn_around_time)/(termList->front->data->run_time);
-            printf("the devil himself sarah**3 %d\n",termList->size);
+
 
     wta_arr[i]=termList->front->data->turn_around_time;
-    printf("the devil himself sarah1 %d\n",termList->size);
+    
+    printf("popping process with id %d from term list\n",termList->front->data->id);
     pop(termList);
-    printf("the devil himself sarah2 %d\n",termList->size);
+    printQueue(termList);
+  
     i++;
 
 }

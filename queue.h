@@ -65,10 +65,12 @@ int push(struct Queue* queue, struct Process* data){
             newNode->next = temp;
         }
         else{
+           struct ListNode* temp = prev->next;
+            prev->next = newNode;
             if(!prev->next) queue->back = newNode;
-            struct ListNode* temp = prev->next;
-            prev->next = newNode;       
-            newNode->next=temp;
+            else
+                newNode->next=temp;
+            
         }
     }
 
@@ -85,8 +87,14 @@ int push(struct Queue* queue, struct Process* data){
             newNode->next = temp;
         }
         else{
+            struct ListNode* temp = prev->next;
+            prev->next = newNode;
             if(!prev->next) queue->back = newNode;
-            prev->next = newNode;       
+            else 
+            {
+                
+                newNode->next=temp;
+            }
         }
     }
     queue->size++;
