@@ -8,7 +8,7 @@ void resume(int signum){
 
 /* Modify this file as needed*/
 int remainingtime;
-
+int quantum;
 char *shmaddr_for_process;
 int shmid_for_process;
 
@@ -52,27 +52,34 @@ int main(int agrc, char * argv[])
     }
 
     prev_time_seen = getClk();
- 
+    printf("remaing time %s quantum %s",argv[1],argv[2]);
     remainingtime = atoi(argv[1]);
+    quantum= atoi(argv[2]);
+    int ran_time=0;
     printf("the procces with rem time %d forked\n",remainingtime);
-    while (remainingtime > 0)
+    while (remainingtime > 0 )
     {
         
      
         if(prev_time_seen != getClk()) {
             printf("Prev time in process : %d, Current clk: %d",prev_time_seen,getClk());
             remainingtime--;
-            
+            ran_time++;
             char str[5];
             sprintf(str, "%d", remainingtime);
             char* message = concatenate_with_hash(remainingtime,getClk());
             strcpy((char *)shmaddr_for_process, message);
             prev_time_seen = getClk();
             printf("remaining time%d\n",remainingtime);
-            
+            if((quantum!= -1)?ran_time==quantum:0)
+            {
+                ran_time=0;
+                kill(getppid(),SIGXCPU);
+            }
         }
 
     }
+
 //////////////////////////////////////
     if (remainingtime==0)
     {
@@ -87,5 +94,6 @@ int main(int agrc, char * argv[])
         destroyClk(false);
         printf("Process commiting self exit game\n");
     }
+    
     return 0;
 }

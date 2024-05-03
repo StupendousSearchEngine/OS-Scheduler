@@ -15,6 +15,7 @@ pid_t process_id;
 };
 void RR();
 int prevclk =-1;
+int prev_remaining=-1;
  /*
     1. Start a new process. (Fork it and give it its parameters.)
     2. Switch between two processes according to the scheduling algorithm. (Stop the
@@ -36,7 +37,7 @@ int prevclk =-1;
     */
 
 int ctx_switch_time, num_processes_total;
-int quantum;
+int quantum=-1;
 void pickSchedulingAlgo();
 struct Process *current_process;
 int terminated_process_number=0;
@@ -131,7 +132,11 @@ void handler(int signum)
     
     signal(SIGUSR1,handler);
 }
-
+void rrPause(int signum)
+{
+    RR();
+    signal(SIGXCPU,rrPause);
+}
 void processDone(int signum)
 {
     printf("CURRENT PROCESS TERMINATING ID %d\n",current_process->id);
@@ -209,14 +214,18 @@ void runProcess()
                 }
                 char temp1[10];
                 sprintf(temp1, "%d", top->remaining_time);
-                char *args[] = {"process.o", temp1, NULL};
+                char temp2[10];
+                sprintf(temp2, "%d", quantum);
+                char *args[] = {"process.o", temp1, temp2, NULL};
                 execv("./process.o", args);
                 perror("execv failed");
             }
             else{
-                prevclk=getClk();
+               
              
                 current_process = top;
+                prev_remaining=current_process->remaining_time;
+                prevclk=getClk();
                 current_process->last_run_time=getClk();
                 current_process->wait+=getClk()-current_process->arrival_time;
                 fflush(scheduler_log);
@@ -248,16 +257,15 @@ void runProcess()
             else 
             {
                 prevclk=getClk();
+                prev_remaining=current_process->remaining_time;
+                
                 printf("popping process with id %d in runprocess second else\n",top->id);
                 pop(ready_queue);
                 printQueue(ready_queue);
             }
         }
     }
-    else
-    {
-        //printf("There are no proceses to run\n");
-    } 
+    
     
    
 }
@@ -323,7 +331,7 @@ void RR()
     int clk_in_process;
     if (current_process)
     {
-        int prev=getClk();
+      
         decode_with_hash(shmaddr_for_process,&rem_time,&clk_in_process);
         current_process->remaining_time=rem_time;
         if(current_process->remaining_time>0)
@@ -455,7 +463,7 @@ int main(int argc, char * argv[])
     msgq_id = msgget(key_id, 0666 | IPC_CREAT);
     signal(SIGUSR1,handler);
     signal(SIGUSR2,processDone);
-  
+    signal(SIGXCPU, rrPause);
     initClk();
     termList = initQueue(0);
     printf("verfy Pid %d\n",getpid());
@@ -495,14 +503,7 @@ int main(int argc, char * argv[])
     }
 
 
-    printf("RR QUANTUM %d\n",quantum);
-    while(scheduling_algo==0 && termList->size!=num_processes_total)
-    {
-        while(prevclk+quantum!=getClk());
-        RR();
-    }
-        
-    while(termList->size!=num_processes_total && scheduling_algo!=0);
+    while(termList->size!=num_processes_total);
 
     write_perf();
     fclose(scheduler_perf);

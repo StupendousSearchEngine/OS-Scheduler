@@ -5,8 +5,8 @@ At time 16 process 4 started arr 1 total 5 remain 5 wait 15
 At time 21 process 1 resumed arr 1 total 5 remain 1 wait 20
 At time 22 process 1 stopped arr 1 total 5 remain 0 wait 20
 At time 23 process 2 resumed arr 1 total 5 remain 1 wait 22
-At time 23 process 2 stopped arr 1 total 5 remain 0 wait 22
-At time 24 process 3 resumed arr 1 total 5 remain 1 wait 23
-At time 25 process 3 stopped arr 1 total 5 remain 0 wait 23
-At time 26 process 4 resumed arr 1 total 5 remain 1 wait 25
-At time 27 process 4 stopped arr 1 total 5 remain 0 wait 25
+At time 24 process 2 stopped arr 1 total 5 remain 0 wait 22
+At time 25 process 3 resumed arr 1 total 5 remain 1 wait 24
+At time 26 process 3 stopped arr 1 total 5 remain 0 wait 24
+At time 27 process 4 resumed arr 1 total 5 remain 1 wait 26
+At time 28 process 4 stopped arr 1 total 5 remain 0 wait 26
